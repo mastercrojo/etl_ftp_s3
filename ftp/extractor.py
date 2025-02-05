@@ -9,7 +9,7 @@ from tqdm import tqdm
 from botocore.exceptions import ClientError
 from ftp.ftp_client import connect_ftp
 from data.database import load_dataframes
-from config.settings import AWS_S3_BUCKET
+from config.settings import  AWS_DEFAULT_REGION, AWS_S3_BUCKET, AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY
 
 # Configurar logging
 logging.basicConfig(
@@ -19,7 +19,13 @@ logging.basicConfig(
 )
 
 # Cliente S3
-s3_client = boto3.client('s3')
+def get_s3_client():
+    return boto3.client(
+        "s3",
+        region_name=AWS_DEFAULT_REGION,
+        aws_access_key_id=AWS_ACCESS_KEY_ID,
+        aws_secret_access_key=AWS_SECRET_ACCESS_KEY
+    )
 
 def extract_info(path):
     """Extrae información de un archivo con formato `nombre_yyyymmddhhmmss.csv`"""
