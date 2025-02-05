@@ -16,5 +16,10 @@ FTP_USER = os.getenv("FTP_USER")
 FTP_PASSWORD = os.getenv("FTP_PASSWORD")
 FTP_DIR = os.getenv("FTP_DIR", "/")  # Directorio raíz por defecto
 
-# Configuración de AWS S3
+
+# Configuración de AWS 
+AWS_ACCESS_KEY_ID = os.getenv("AWS_ACCESS_KEY_ID", "xxx")
+AWS_SECRET_ACCESS_KEY = os.getenv("AWS_SECRET_ACCESS_KEY", "xxx")
+AWS_DEFAULT_REGION = os.getenv("AWS_DEFAULT_REGION", "us-east-1")
 AWS_S3_BUCKET = os.getenv("AWS_S3_BUCKET")
+
