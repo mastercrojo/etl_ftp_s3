@@ -1,0 +1,15 @@
+# Archivos de entorno
+config/
+.env
+
+# Archivos de compilación de Python
+__pycache__/
+*.pyc
+*.pyo
+
+# Configuración de entornos virtuales
+venv/
+.env/
+
+# Archivos de logs
+*.log
