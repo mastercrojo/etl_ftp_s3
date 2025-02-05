@@ -1,0 +1,8 @@
+python-dotenv
+pymysql
+pandas
+boto3
+pytest 
+moto 
+pytest-mock
+tqdm
