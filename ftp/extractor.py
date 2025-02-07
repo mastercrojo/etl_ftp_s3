@@ -27,6 +27,9 @@ def get_s3_client():
         aws_secret_access_key=AWS_SECRET_ACCESS_KEY
     )
 
+# Cliente S3
+s3_client = get_s3_client()
+
 def extract_info(path):
     """Extrae información de un archivo con formato `nombre_yyyymmddhhmmss.csv`"""
     file_name = path.split("/")[-1]
@@ -71,7 +74,7 @@ def process_files():
         df_diccionario, df_s3_paths = load_dataframes()
         
         # Obtener lista de archivos y filtrar los que contienen "202501"
-        archivos = [archivo for archivo in ftp.nlst() if "202501" in archivo]
+        archivos = [archivo for archivo in ftp.nlst() if "202502" in archivo ]
 
         logging.info(f"Se encontraron {len(archivos)} archivos que coinciden con el filtro '202501' en el FTP.")
         # Registrar marca de tiempo
