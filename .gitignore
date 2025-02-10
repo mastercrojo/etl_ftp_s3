@@ -7,6 +7,18 @@ __pycache__/
 *.pyc
 *.pyo
 
+config/__pycache__/
+*.pyc
+*.pyo
+
+data/__pycache__/
+*.pyc
+*.pyo
+
+ftp/__pycache__/
+*.pyc
+*.pyo
+
 # Configuración de entornos virtuales
 venv/
 .env/
