@@ -2,7 +2,7 @@ import re
 import io
 import logging
 import ftplib  # Para capturar errores de FTP
-from datetime import datetime
+from datetime import datetime , timedelta
 import pandas as pd
 import boto3
 from tqdm import tqdm
@@ -66,6 +66,23 @@ def file_exists_in_s3(bucket_name, s3_key):
         else:
             raise  # Otro error, lo lanzamos para depuración
 
+def generar_rango_meses(num_meses):
+    """
+    Genera una lista de meses en formato YYYYMM, considerando el mes actual y los anteriores.
+    
+    Args:
+        num_meses (int): Número de meses a incluir en el rango (incluyendo el mes actual).
+    
+    Returns:
+        List[str]: Lista de meses en formato YYYYMM.
+    """
+    hoy = datetime.now()
+    meses = [
+        (hoy - timedelta(days=30 * i)).strftime('%Y%m')  # Restar meses en pasos de ~30 días
+        for i in range(num_meses)
+    ]
+    return meses
+
 def process_files():
     try:
         """Descarga archivos del FTP, extrae información y determina la ruta en S3"""
@@ -90,12 +107,15 @@ def process_files():
         # Listar archivos en el FTP
         archivos_ftp = ftp.nlst()
 
-        # Filtrar archivos
+        # Generar rango de meses (por ejemplo, 2 meses: actual y anterior)
+        rango_meses = generar_rango_meses(num_meses=2)
+        
+        # Filtrar archivos        
         if not primera_ejecucion:
-            archivos_a_procesar = [archivo for archivo in archivos_ftp if archivo not in archivos_procesados and ("202501" in archivo or "202502" in archivo)]
+            archivos_a_procesar = [archivo for archivo in archivos_ftp if archivo not in archivos_procesados and any(mes in archivo for mes in rango_meses)]
             logging.info(f"Caso normal, ya existen archivos procesados.")
         else:
-            archivos_a_procesar = [archivo for archivo in archivos_ftp if "202501" in archivo or "202502" in archivo]
+            archivos_a_procesar = [archivo for archivo in archivos_ftp if any(mes in archivo for mes in rango_meses)]
             logging.info(f"Se gatilla la condicion inicial para la primera ejecución, se procesarán los archivos de enero y febrero de 2025.")
 
         logging.info(f"Se encontraron {len(archivos_a_procesar)} archivos que coinciden con el filtro en el FTP.")
