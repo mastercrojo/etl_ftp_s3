@@ -92,7 +92,7 @@ def process_files():
 
         # Filtrar archivos
         if not primera_ejecucion:
-            archivos_a_procesar = [archivo for archivo in archivos_ftp if archivo not in archivos_procesados]
+            archivos_a_procesar = [archivo for archivo in archivos_ftp if archivo not in archivos_procesados and ("202501" in archivo or "202502" in archivo)]
             logging.info(f"Caso normal, ya existen archivos procesados.")
         else:
             archivos_a_procesar = [archivo for archivo in archivos_ftp if "202501" in archivo or "202502" in archivo]
