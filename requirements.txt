@@ -6,3 +6,4 @@ pytest
 moto 
 pytest-mock
 tqdm
+sqlalchemy
