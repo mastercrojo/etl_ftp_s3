@@ -8,12 +8,12 @@ import boto3
 from tqdm import tqdm
 from botocore.exceptions import ClientError
 from ftp.ftp_client import connect_ftp
-from data.database import load_dataframes
+from data.database import load_dataframes, get_archivos_procesados, register_archivo_procesado, connect_db
 from config.settings import  AWS_DEFAULT_REGION, AWS_S3_BUCKET, AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY
 
 # Configurar logging
 logging.basicConfig(
-    filename="etl_log.log",
+    filename="etl_ftp_s3.log",
     level=logging.INFO,
     format="%(asctime)s - %(levelname)s - %(message)s"
 )
@@ -71,22 +71,44 @@ def process_files():
         """Descarga archivos del FTP, extrae información y determina la ruta en S3"""
         logging.info("Iniciando proceso de descarga y carga de archivos en S3...")
         ftp = connect_ftp()
-        df_diccionario, df_s3_paths = load_dataframes()
-        
-        # Obtener lista de archivos y filtrar los que contienen "202501"
-        archivos = [archivo for archivo in ftp.nlst() if "202502" in archivo ]
 
-        logging.info(f"Se encontraron {len(archivos)} archivos que coinciden con el filtro '202501' en el FTP.")
+         # Conexión a la base de datos
+        engine, Session = connect_db()
+        session = Session()
+        
+        df_diccionario, df_s3_paths = load_dataframes(session)
+        
+        # Obtener lista de archivos ya procesados
+        archivos_procesados = get_archivos_procesados(session)
+
+        # Si la base de datos está vacía (primera ejecución)
+        primera_ejecucion = len(archivos_procesados) == 0
+        
+        if primera_ejecucion:
+            logging.info("Primera ejecución detectada: todos los archivos serán procesados.")
+
+        # Listar archivos en el FTP
+        archivos_ftp = ftp.nlst()
+
+        # Filtrar archivos
+        if not primera_ejecucion:
+            archivos_a_procesar = [archivo for archivo in archivos_ftp if archivo not in archivos_procesados]
+            logging.info(f"Caso normal, ya existen archivos procesados.")
+        else:
+            archivos_a_procesar = [archivo for archivo in archivos_ftp if "202501" in archivo or "202502" in archivo]
+            logging.info(f"Se gatilla la condicion inicial para la primera ejecución, se procesarán los archivos de enero y febrero de 2025.")
+
+        logging.info(f"Se encontraron {len(archivos_a_procesar)} archivos que coinciden con el filtro en el FTP.")
         # Registrar marca de tiempo
         start_timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         print(f"\nTiempo en acceder al FTP: {start_timestamp}\n")        
         
-        if not archivos:
-            logging.info("No hay archivos que coincidan con el filtro '202501' en el FTP.")
-            print("No hay archivos que coincidan con el filtro '202501'.")
+        if not archivos_a_procesar:
+            logging.info("No hay archivos que coincidan con el filtro en el FTP.")
+            print("No hay archivos que coincidan con el filtro.")
             return
 
-        for archivo in tqdm(archivos, desc="Procesando archivos", unit="archivo"):
+        for archivo in tqdm(archivos_a_procesar, desc="Procesando archivos", unit="archivo"):
             try:
                 file_name, xlink_name, timestamp = extract_info(archivo)
                 
@@ -102,6 +124,8 @@ def process_files():
                 MM = timestamp.strftime('%m')
                 DD = timestamp.strftime('%d')
                 
+                fecha_archivo = timestamp.strftime('%Y-%m-%d')
+
                 # Buscar codigo_estacion en df_diccionario
                 estacion_data = df_diccionario[df_diccionario["xlink_name"] == xlink_name]
                 if estacion_data.empty:
@@ -132,7 +156,8 @@ def process_files():
                 # Verificar si el archivo ya existe en S3
                 if file_exists_in_s3(AWS_S3_BUCKET, s3_key):
                     logging.info(f"Archivo ya existe en S3: {s3_key}. Omitiendo...")
-                    # print(f"✅ Archivo ya existe en S3: {s3_key}. Omitiendo...")
+                    if not register_archivo_procesado(session, file_name, codigo_estacion, fecha_archivo):
+                        logging.warning(f"Error al almacenenar en MySql el archivo: {file_name}")  
                     continue  # Pasar al siguiente archivo
                 
                 # Descargar archivo desde FTP
@@ -142,8 +167,10 @@ def process_files():
                     
                     # Subir archivo a S3
                     s3_client.upload_fileobj(file_stream, AWS_S3_BUCKET, s3_key)
-                    # print(f"Archivo {file_name} subido a S3: {s3_key}")
                     logging.warning(f"Archivo {file_name} subido a S3: {s3_key}")
+                
+                # Registrar archivo como procesado
+                register_archivo_procesado(session, file_name, codigo_estacion, fecha_archivo)
             
             except Exception as file_error:
                 logging.warning(f"Error al procesar {archivo}: {str(file_error)}")
