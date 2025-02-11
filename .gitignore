@@ -19,6 +19,10 @@ ftp/__pycache__/
 *.pyc
 *.pyo
 
+models/__pycache__/
+*.pyc
+*.pyo
+
 # Configuración de entornos virtuales
 venv/
 .env/
